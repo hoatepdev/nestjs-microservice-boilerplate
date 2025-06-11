@@ -1,0 +1,3 @@
+{
+  "*.{js,ts,jsx}": ["yarn lint --fix", "yarn prettier"]
+}

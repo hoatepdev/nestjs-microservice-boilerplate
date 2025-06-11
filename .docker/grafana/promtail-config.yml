@@ -1,0 +1,18 @@
+server:
+  http_listen_port: 9630
+  grpc_listen_port: 9095
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:9630/loki/api/v1/push
+
+scrape_configs:
+  - job_name: nestjs-boilerplate-microservice-api
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: varlogs
+          __path__: /var/log/*.log

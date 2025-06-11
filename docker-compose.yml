@@ -1,0 +1,13 @@
+version: '2'
+services:
+  microservice-api:
+    container_name: microservice-api
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - '9999:9999'
+    volumes:
+      - ./src:/app/src
