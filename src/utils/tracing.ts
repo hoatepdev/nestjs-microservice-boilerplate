@@ -28,17 +28,21 @@ const resource = new Resource({
   'service.version': version
 });
 
-const metricExporter = new OTLPMetricExporter();
+const isMetricsEnabled = process.env.OTEL_EXPORTER_METRICS_ENABLED === 'true';
 
-const metricReader = new PeriodicExportingMetricReader({
-  exporter: metricExporter,
-  exportIntervalMillis: 10000
-});
+const metricExporter = isMetricsEnabled ? new OTLPMetricExporter() : undefined;
+const metricReader =
+  isMetricsEnabled && metricExporter
+    ? new PeriodicExportingMetricReader({
+        exporter: metricExporter,
+        exportIntervalMillis: 10000
+      })
+    : undefined;
 
 const sdk = new NodeSDK({
   resource,
   traceExporter: tracerExporter,
-  metricReader,
+  ...(metricReader ? { metricReader } : {}),
   instrumentations: [
     new HttpInstrumentation({
       responseHook: (span: Span | any, res: IncomingMessage | ServerResponse | any) => {
@@ -46,7 +50,6 @@ const sdk = new NodeSDK({
           span.updateName(updateSpanName(span, res['req']));
         }
       },
-
       requestHook: (span: Span | any, request: ClientRequest | IncomingMessage | any) => {
         const id = [request['id'], request['traceid'], request['headers']?.traceid].find(Boolean);
         if (!id) {
@@ -54,13 +57,11 @@ const sdk = new NodeSDK({
           request['id'] = request['headers'].traceid;
           span.setAttribute('traceid', request['id']);
         }
-
         span.updateName(updateSpanName(span, request));
       }
     }),
     new RedisInstrumentation({
       requireParentSpan: true,
-
       responseHook: (span: Span | any) => {
         const [name, method] = span['name'].split('-');
         span.updateName(`${name} => ${method}`);
@@ -68,7 +69,6 @@ const sdk = new NodeSDK({
     }),
     new MongoDBInstrumentation({
       enhancedDatabaseReporting: true,
-
       responseHook: (span: Span | any) => {
         span.updateName(`mongodb => ${span['name'].split('.')[1]}`);
       }

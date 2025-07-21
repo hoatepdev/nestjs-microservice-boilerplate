@@ -64,7 +64,7 @@ export class insertUser1727655177319 implements MigrationInterface {
     await queryRunner.manager.delete(UserPasswordSchema, {
       password: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'
     });
-    await queryRunner.manager.delete(UserSchema, { email: 'admin@admin.com' });
+    await queryRunner.manager.delete(UserSchema, { email: 'admin1@admin.com' });
     await queryRunner.query(`Delete from permissions_roles`);
   }
 }

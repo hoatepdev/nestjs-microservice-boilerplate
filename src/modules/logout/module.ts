@@ -12,7 +12,7 @@ import { ILogoutAdapter } from './adapter';
 import { LogoutController } from './controller';
 
 @Module({
-  imports: [RedisCacheModule, SecretsModule, RedisCacheModule, TokenLibModule, LoggerModule],
+  imports: [RedisCacheModule, SecretsModule, TokenLibModule, LoggerModule],
   controllers: [LogoutController],
   providers: [
     {

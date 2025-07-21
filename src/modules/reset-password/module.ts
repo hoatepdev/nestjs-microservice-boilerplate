@@ -26,7 +26,6 @@ import { ResetPasswordRepository } from './repository';
     LoggerModule,
     RedisCacheModule,
     UserModule,
-    TokenLibModule,
     EventLibModule,
     TypeOrmModule.forFeature([ResetPasswordSchema])
   ],

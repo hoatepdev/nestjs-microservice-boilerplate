@@ -10,9 +10,10 @@ import { ITokenAdapter, TokenLibModule } from '@/libs/token';
 import { UserModule } from '../user/module';
 import { ILoginAdapter, IRefreshTokenAdapter } from './adapter';
 import { LoginController } from './controller';
+import { GoogleAuthService } from './google-auth.service';
 
 @Module({
-  imports: [TokenLibModule, UserModule, SecretsModule, HttpModule, UserModule],
+  imports: [TokenLibModule, UserModule, SecretsModule, HttpModule],
   controllers: [LoginController],
   providers: [
     {
@@ -28,7 +29,8 @@ import { LoginController } from './controller';
         return new RefreshTokenUsecase(repository, tokenService);
       },
       inject: [IUserRepository, ITokenAdapter]
-    }
+    },
+    GoogleAuthService
   ]
 })
 export class LoginModule {}

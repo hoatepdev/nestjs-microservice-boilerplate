@@ -3,11 +3,6 @@ import { APP_GUARD, APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 
 import { InfraModule } from '@/infra/module';
 import { AuthorizationRoleGuard } from '@/middlewares/guards';
-import { CatModule } from '@/modules/cat/module';
-import { HealthModule } from '@/modules/health/module';
-import { LoginModule } from '@/modules/login/module';
-import { LogoutModule } from '@/modules/logout/module';
-import { UserModule } from '@/modules/user/module';
 
 import { IUserRepository } from './core/user/repository/user';
 import { ILoggerAdapter, LoggerModule } from './infra/logger';
@@ -20,9 +15,14 @@ import {
   TracingInterceptor
 } from './middlewares/interceptors';
 import { AlertModule } from './modules/alert/module';
+import { CatModule } from './modules/cat/module';
+import { HealthModule } from './modules/health/module';
+import { LoginModule } from './modules/login/module';
+import { LogoutModule } from './modules/logout/module';
 import { PermissionModule } from './modules/permission/module';
 import { ResetPasswordModule } from './modules/reset-password/module';
 import { RoleModule } from './modules/role/module';
+import { UserModule } from './modules/user/module';
 
 @Module({
   imports: [
@@ -42,42 +42,30 @@ import { RoleModule } from './modules/role/module';
   providers: [
     {
       provide: APP_INTERCEPTOR,
-      useFactory(logger: ILoggerAdapter) {
-        return new RequestTimeoutInterceptor(new Reflector(), logger);
-      },
+      useFactory: (logger: ILoggerAdapter) => new RequestTimeoutInterceptor(new Reflector(), logger),
       inject: [ILoggerAdapter]
     },
     {
       provide: APP_INTERCEPTOR,
-      useFactory() {
-        return new ExceptionHandlerInterceptor();
-      }
+      useFactory: () => new ExceptionHandlerInterceptor()
     },
     {
       provide: APP_INTERCEPTOR,
-      useFactory(logger: ILoggerAdapter) {
-        return new HttpLoggerInterceptor(logger);
-      },
+      useFactory: (logger: ILoggerAdapter) => new HttpLoggerInterceptor(logger),
       inject: [ILoggerAdapter]
     },
     {
       provide: APP_INTERCEPTOR,
-      useFactory(logger: ILoggerAdapter) {
-        return new TracingInterceptor(logger);
-      },
+      useFactory: (logger: ILoggerAdapter) => new TracingInterceptor(logger),
       inject: [ILoggerAdapter]
     },
     {
       provide: APP_INTERCEPTOR,
-      useFactory() {
-        return new MetricsInterceptor();
-      }
+      useFactory: () => new MetricsInterceptor()
     },
     {
       provide: APP_GUARD,
-      useFactory: (repository: IUserRepository) => {
-        return new AuthorizationRoleGuard(new Reflector(), repository);
-      },
+      useFactory: (repository: IUserRepository) => new AuthorizationRoleGuard(new Reflector(), repository),
       inject: [IUserRepository]
     }
   ]
