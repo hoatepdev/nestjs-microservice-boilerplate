@@ -11,7 +11,7 @@ import { UserPasswordEntity, UserPasswordEntitySchema } from '../entity/user-pas
 import { IUserRepository } from '../repository/user';
 
 export const LoginSchema = UserEntitySchema.pick({
-  email: true
+  accountId: true
 }).merge(UserPasswordEntitySchema.pick({ password: true }));
 
 export class LoginUsecase implements IUsecase {
@@ -24,16 +24,16 @@ export class LoginUsecase implements IUsecase {
   async execute(input: LoginInput, { tracing }: ApiTrancingInput): Promise<LoginOutput> {
     const user = await this.userRepository.findOneWithRelation(
       {
-        email: input.email
+        accountId: input.accountId
       },
-      { password: true }
+      { account: true }
     );
 
-    if (!user) {
+    if (!user || !user.account) {
       throw new ApiNotFoundException('userNotFound');
     }
 
-    if (!user.roles.length) {
+    if (!user.account.roles.length) {
       throw new ApiNotFoundException('roleNotFound');
     }
 
@@ -41,13 +41,13 @@ export class LoginUsecase implements IUsecase {
 
     passwordEntity.createPassword();
 
-    passwordEntity.verifyPassword(user.password.password);
+    passwordEntity.verifyPassword(user.account.password.password);
 
     tracing.logEvent('user-login', `${user}`);
 
     const { token } = this.tokenService.sign({
-      email: user.email,
-      name: user.name,
+      email: user.account.email,
+      name: user.account.username,
       id: user.id
     } as UserRequest);
 

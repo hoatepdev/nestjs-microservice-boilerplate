@@ -1,4 +1,4 @@
-import { UserEntity, UserEntitySchema } from '@/core/user/entity/user';
+import { UserEntity } from '@/core/user/entity/user';
 import { IUserRepository } from '@/core/user/repository/user';
 import { SendEmailInput } from '@/infra/email';
 import { ISecretsAdapter } from '@/infra/secrets';
@@ -9,13 +9,13 @@ import { ValidateSchema } from '@/utils/decorators';
 import { ApiNotFoundException } from '@/utils/exception';
 import { IUsecase } from '@/utils/usecase';
 import { UUIDUtils } from '@/utils/uuid';
-import { Infer } from '@/utils/validator';
+import { Infer, InputValidator } from '@/utils/validator';
 
 import { ResetPasswordEntity } from '../entity/reset-password';
 import { IResetPasswordRepository } from '../repository/reset-password';
 
-export const ResetPasswordSendEmailSchema = UserEntitySchema.pick({
-  email: true
+export const ResetPasswordSendEmailSchema = InputValidator.object({
+  email: InputValidator.string().email()
 });
 
 export class ResetPasswordSendEmailUsecase implements IUsecase {
@@ -29,9 +29,9 @@ export class ResetPasswordSendEmailUsecase implements IUsecase {
 
   @ValidateSchema(ResetPasswordSendEmailSchema)
   async execute({ email }: ResetPasswordSendEmailInput): Promise<ResetPasswordSendEmailOutput> {
-    const user = await this.userRepository.findOne({ email });
+    const user = await this.userRepository.findByAccountEmail(email);
 
-    if (!user) {
+    if (!user || !user.account) {
       throw new ApiNotFoundException('user not found');
     }
 
@@ -51,10 +51,10 @@ export class ResetPasswordSendEmailUsecase implements IUsecase {
 
   private sendEmail(user: UserEntity, token: string) {
     this.event.emit<SendEmailInput>(EventNameEnum.SEND_EMAIL, {
-      email: user.email,
+      email: user.account!.email,
       subject: 'Reset password',
       template: 'reque-reset-password',
-      payload: { name: user.name, link: `${this.secret.HOST}/api/v1/reset-password/${token}` }
+      payload: { name: user.account!.username, link: `${this.secret.HOST}/api/v1/reset-password/${token}` }
     });
   }
 }

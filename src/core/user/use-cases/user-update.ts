@@ -1,11 +1,9 @@
-import { RoleEnum } from '@/core/role/entity/role';
-import { IRoleRepository } from '@/core/role/repository/role';
 import { ILoggerAdapter } from '@/infra/logger';
 import { ValidateSchema } from '@/utils/decorators';
-import { ApiConflictException, ApiNotFoundException } from '@/utils/exception';
+import { ApiNotFoundException } from '@/utils/exception';
 import { ApiTrancingInput } from '@/utils/request';
 import { IUsecase } from '@/utils/usecase';
-import { Infer, InputValidator } from '@/utils/validator';
+import { Infer } from '@/utils/validator';
 
 import { UserEntity, UserEntitySchema } from '../entity/user';
 import { IUserRepository } from '../repository/user';
@@ -13,34 +11,26 @@ import { IUserRepository } from '../repository/user';
 export const UserUpdateSchema = UserEntitySchema.pick({
   id: true
 })
-  .merge(UserEntitySchema.pick({ name: true, email: true, roles: true }).partial())
-  .merge(InputValidator.object({ roles: InputValidator.array(InputValidator.nativeEnum(RoleEnum)).optional() }))
+  .merge(
+    UserEntitySchema.pick({ fullName: true, dateOfBirth: true, gender: true, avatar: true, phone: true }).partial()
+  )
   .strict();
 
 export class UserUpdateUsecase implements IUsecase {
   constructor(
     private readonly userRepository: IUserRepository,
-    private readonly loggerService: ILoggerAdapter,
-    private readonly roleRepository: IRoleRepository
+    private readonly loggerService: ILoggerAdapter
   ) {}
 
   @ValidateSchema(UserUpdateSchema)
   async execute(input: UserUpdateInput, { tracing, user: userData }: ApiTrancingInput): Promise<UserUpdateOutput> {
-    const user = await this.userRepository.findOne({ id: input.id });
+    const user = await this.userRepository.findOneWithRelation({ id: input.id }, { account: true });
 
-    if (!user) {
+    if (!user || !user.account) {
       throw new ApiNotFoundException('userNotFound');
     }
 
-    const roles = await this.getRoles(input);
-
-    const entity = new UserEntity({ ...user, ...input, roles: roles ?? user.roles });
-
-    const userExists = await this.userRepository.existsOnUpdate({ email: entity.email }, { id: entity.id });
-
-    if (userExists) {
-      throw new ApiConflictException('userExists');
-    }
+    const entity = new UserEntity({ ...user, ...input });
 
     await this.userRepository.create(entity);
 
@@ -50,21 +40,9 @@ export class UserUpdateUsecase implements IUsecase {
 
     const entityUpdated = new UserEntity(updated as UserEntity);
 
-    tracing.logEvent('user-updated', `user: ${user.email} updated by: ${userData.email}`);
+    tracing.logEvent('user-updated', `user: ${user.account.email} updated by: ${userData.email}`);
 
     return entityUpdated;
-  }
-
-  private async getRoles(input: UserUpdateInput) {
-    if (input.roles) {
-      const roles = await this.roleRepository.findIn({ name: input.roles });
-
-      if (roles.length < (input.roles as RoleEnum[]).length) {
-        throw new ApiNotFoundException('roleNotFound');
-      }
-
-      return roles;
-    }
   }
 }
 

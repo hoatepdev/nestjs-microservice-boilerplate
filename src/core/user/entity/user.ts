@@ -1,24 +1,27 @@
-import { RoleEntity, RoleEntitySchema } from '@/core/role/entity/role';
+import { AccountEntity, AccountEntitySchema } from '@/core/account/entity/account';
 import { BaseEntity } from '@/utils/entity';
 import { Infer, InputValidator } from '@/utils/validator';
 
-import { UserPasswordEntity, UserPasswordEntitySchema } from './user-password';
-
 const ID = InputValidator.string().uuid();
-const Email = InputValidator.string().email();
-const Name = InputValidator.string();
-const Password = UserPasswordEntitySchema;
-const Role = RoleEntitySchema;
+const AccountId = InputValidator.string().uuid();
+const FullName = InputValidator.string();
+const DateOfBirth = InputValidator.date().nullish();
+const Gender = InputValidator.enum(['male', 'female', 'other']).nullish();
+const Avatar = InputValidator.string().url().nullish();
+const Phone = InputValidator.string().nullish();
 const CreatedAt = InputValidator.date().nullish();
 const UpdatedAt = InputValidator.date().nullish();
 const DeletedAt = InputValidator.date().nullish();
 
 export const UserEntitySchema = InputValidator.object({
   id: ID,
-  name: Name,
-  email: Email,
-  roles: InputValidator.array(Role.optional()).min(1),
-  password: Password.optional(),
+  accountId: AccountId,
+  fullName: FullName,
+  dateOfBirth: DateOfBirth,
+  gender: Gender,
+  avatar: Avatar,
+  phone: Phone,
+  account: AccountEntitySchema.optional(),
   createdAt: CreatedAt,
   updatedAt: UpdatedAt,
   deletedAt: DeletedAt
@@ -27,13 +30,19 @@ export const UserEntitySchema = InputValidator.object({
 type User = Infer<typeof UserEntitySchema>;
 
 export class UserEntity extends BaseEntity<UserEntity>() {
-  name!: string;
+  accountId!: string;
 
-  email!: string;
+  fullName!: string;
 
-  roles!: RoleEntity[];
+  dateOfBirth?: Date;
 
-  password!: UserPasswordEntity;
+  gender?: 'male' | 'female' | 'other';
+
+  avatar?: string;
+
+  phone?: string;
+
+  account?: AccountEntity;
 
   constructor(entity: User) {
     super(UserEntitySchema);

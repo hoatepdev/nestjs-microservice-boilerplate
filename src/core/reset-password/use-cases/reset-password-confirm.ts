@@ -35,9 +35,9 @@ export class ResetPasswordConfirmUsecase implements IUsecase {
 
     const token = await this.token.verify<ResetPasswordConfirmVerify>(input.token);
 
-    const user = await this.userRepository.findOneWithRelation({ id: token.id }, { password: true });
+    const user = await this.userRepository.findOneWithRelation({ id: token.id }, { account: true });
 
-    if (!user) {
+    if (!user || !user.account) {
       throw new ApiNotFoundException('user not found');
     }
 
@@ -47,17 +47,17 @@ export class ResetPasswordConfirmUsecase implements IUsecase {
       throw new ApiUnauthorizedException('token was expired');
     }
 
-    const passwordEntity = new UserPasswordEntity(user.password);
+    const passwordEntity = new UserPasswordEntity(user.account.password);
 
     passwordEntity.createPassword();
 
     await this.userRepository.create(user);
 
     this.event.emit<SendEmailInput>(EventNameEnum.SEND_EMAIL, {
-      email: user.email,
+      email: user.account.email,
       subject: 'Password has been changed successfully',
       template: 'reset-password',
-      payload: { name: user.name }
+      payload: { name: user.account.username }
     });
 
     await this.resetPasswordTokenRepository.remove({ userId: user.id });

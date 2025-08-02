@@ -2,6 +2,7 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { SpanStatusCode } from '@opentelemetry/api';
 
+import { PermissionEntity } from '@/core/permission/entity/permission';
 import { IUserRepository } from '@/core/user/repository/user';
 import { PERMISSION_GUARD } from '@/utils/decorators';
 import { ApiForbiddenException, ApiUnauthorizedException } from '@/utils/exception';
@@ -34,17 +35,17 @@ export class AuthorizationRoleGuard implements CanActivate {
       throw new ApiUnauthorizedException('invalidToken');
     }
 
-    const user = await this.userRepository.findOneWithRelation({ id: userId }, { roles: true });
+    const user = await this.userRepository.findOneWithRelation({ id: userId }, { account: true });
 
-    if (!user) {
+    if (!user || !user.account) {
       this.finishTracing(request, ApiUnauthorizedException.STATUS, 'userNotFound');
       throw new ApiUnauthorizedException('userNotFound');
     }
 
     const permissions = [];
 
-    for (const role of user.roles) {
-      permissions.push(...role.permissions.map((p) => p.name));
+    for (const role of user.account.roles) {
+      permissions.push(...role.permissions.map((p: PermissionEntity) => p.name));
     }
 
     const hasPermission = new Set(permissions).has(requiredPermission);

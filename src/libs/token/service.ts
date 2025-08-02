@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import jwt from 'jsonwebtoken';
 
-import { UserEntitySchema } from '@/core/user/entity/user';
 import { ISecretsAdapter } from '@/infra/secrets';
 import { ApiUnauthorizedException } from '@/utils/exception';
-import { Infer, InputValidator } from '@/utils/validator';
+import { InputValidator } from '@/utils/validator';
 
 import { ITokenAdapter } from './adapter';
 
-export const TokenGetSchema = UserEntitySchema.pick({
-  email: true,
-  roles: true
-}).merge(InputValidator.object({ password: InputValidator.string() }));
+export const TokenGetSchema = InputValidator.object({
+  email: InputValidator.string().email(),
+  name: InputValidator.string(),
+  id: InputValidator.string().uuid()
+});
 
 @Injectable()
 export class TokenService implements ITokenAdapter {
@@ -40,7 +40,15 @@ export class TokenService implements ITokenAdapter {
   }
 }
 
-export type SignInput = Infer<typeof TokenGetSchema>;
+export type SignInput =
+  | {
+      email: string;
+      name: string;
+      id: string;
+    }
+  | {
+      userId: string;
+    };
 
 export type SignOutput = {
   token: string;

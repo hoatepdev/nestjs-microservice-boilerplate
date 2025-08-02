@@ -1,12 +1,12 @@
+import { AccountEntity } from '@/core/account/entity/account';
 import { RoleEntity, RoleEnum } from '@/core/role/entity/role';
-import { UserEntity } from '@/core/user/entity/user';
 import { UserPasswordEntity } from '@/core/user/entity/user-password';
 import { UUIDUtils } from '@/utils/uuid';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
+import { AccountSchema } from '../schemas/account';
 import { PermissionSchema } from '../schemas/permission';
 import { RoleSchema } from '../schemas/role';
-import { UserSchema } from '../schemas/user';
 import { UserPasswordSchema } from '../schemas/user-password';
 import { userPermissions } from './1727654555722-insertPermissions';
 
@@ -20,17 +20,35 @@ export class insertUser1727655177319 implements MigrationInterface {
 
     const roles = await queryRunner.manager.find(RoleSchema);
 
-    const entity = new UserEntity({
-      id: UUIDUtils.create(),
-      email: 'admin@admin.com',
-      name: 'Admin',
-      roles: roles.map((r) => new RoleEntity(r))
+    let accountId = UUIDUtils.create();
+    const userId = UUIDUtils.create();
+
+    const existingAccount = await queryRunner.manager.findOne(AccountSchema, {
+      where: { email: 'admin@admin.com' }
     });
-    entity.password = password;
-    await queryRunner.manager.insert(UserSchema, entity as QueryDeepPartialEntity<UserSchema>);
+
+    if (!existingAccount) {
+      const accountEntity = new AccountEntity({
+        id: accountId,
+        email: 'admin@admin.com',
+        username: 'admin',
+        roles: roles.map((r) => new RoleEntity(r)),
+        isActive: true
+      });
+      accountEntity.password = password;
+      await queryRunner.manager.insert(AccountSchema, accountEntity as QueryDeepPartialEntity<AccountSchema>);
+    } else {
+      accountId = existingAccount.id;
+    }
+
+    await queryRunner.query(
+      `INSERT INTO users (id, account_id, full_name) VALUES ('${userId}', '${accountId}', 'Admin')`
+    );
 
     for (const role of roles) {
-      await queryRunner.query(`INSERT INTO users_roles (users_id, roles_id) VALUES('${entity.id}', '${role.id}');`);
+      await queryRunner.query(
+        `INSERT INTO accounts_roles (accounts_id, roles_id) VALUES('${accountId}', '${role.id}');`
+      );
     }
 
     const insertPromiseList = [];
@@ -64,7 +82,7 @@ export class insertUser1727655177319 implements MigrationInterface {
     await queryRunner.manager.delete(UserPasswordSchema, {
       password: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'
     });
-    await queryRunner.manager.delete(UserSchema, { email: 'admin1@admin.com' });
+    await queryRunner.manager.delete(AccountSchema, { email: 'admin@admin.com' });
     await queryRunner.query(`Delete from permissions_roles`);
   }
 }

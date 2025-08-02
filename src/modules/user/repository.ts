@@ -17,10 +17,12 @@ export class UserRepository extends TypeORMRepository<Model> implements IUserRep
   }
 
   async existsOnUpdate(
-    equalFilter: Pick<UserEntity, 'email'>,
+    equalFilter: Pick<UserEntity, 'accountId'>,
     notEqualFilter: Pick<UserEntity, 'id'>
   ): Promise<boolean> {
-    const exists = await this.repository.exists({ where: { id: Not(notEqualFilter.id), email: equalFilter.email } });
+    const exists = await this.repository.exists({
+      where: { id: Not(notEqualFilter.id), accountId: equalFilter.accountId }
+    });
 
     return exists;
   }
@@ -35,15 +37,22 @@ export class UserRepository extends TypeORMRepository<Model> implements IUserRep
     })) as UserEntity;
   }
 
+  async findByAccountEmail(email: string): Promise<UserEntity> {
+    return (await this.repository.findOne({
+      where: { account: { email } },
+      relations: { account: true }
+    })) as UserEntity;
+  }
+
   async softRemove(entity: Partial<UserEntity>): Promise<Model> {
     return await this.repository.softRemove(entity as Model);
   }
 
   @ConvertTypeOrmFilter<UserEntity>([
-    { name: 'email', type: SearchTypeEnum.equal },
-    { name: 'name', type: SearchTypeEnum.like }
+    { name: 'fullName', type: SearchTypeEnum.like },
+    { name: 'phone', type: SearchTypeEnum.equal }
   ])
-  @ValidateDatabaseSortAllowed<UserEntity>({ name: 'email' }, { name: 'name' }, { name: 'createdAt' })
+  @ValidateDatabaseSortAllowed<UserEntity>({ name: 'fullName' }, { name: 'createdAt' })
   async paginate(input: UserListInput): Promise<UserListOutput> {
     const skip = PaginationUtils.calculateSkip(input);
 

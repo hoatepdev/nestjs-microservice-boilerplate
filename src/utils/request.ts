@@ -1,8 +1,6 @@
 import { AttributeValue, Context, Span, SpanStatus, TimeInput, Tracer } from '@opentelemetry/api';
 import { AxiosInstance, AxiosRequestConfig } from 'axios';
 
-import { UserEntity } from '@/core/user/entity/user';
-
 export type TracingType = {
   span: Span;
   tracer: Tracer;
@@ -15,7 +13,11 @@ export type TracingType = {
   finish: () => void;
 };
 
-export type UserRequest = Pick<UserEntity, 'email' | 'name' | 'id'>;
+export type UserRequest = {
+  email: string;
+  name: string;
+  id: string;
+};
 
 export interface ApiRequest {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

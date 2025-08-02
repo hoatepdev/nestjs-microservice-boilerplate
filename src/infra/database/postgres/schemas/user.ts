@@ -5,34 +5,39 @@ import {
   DeleteDateColumn,
   Entity,
   JoinColumn,
-  JoinTable,
-  ManyToMany,
   OneToOne,
   Relation,
   UpdateDateColumn
 } from 'typeorm';
 
-import { RoleSchema } from './role';
-import { UserPasswordSchema } from './user-password';
+import { AccountSchema } from './account';
 
 @Entity({ name: 'users' })
 export class UserSchema extends BaseEntity {
   @Column({ type: 'uuid', primary: true })
   id!: string;
 
-  @Column('text')
-  name!: string;
+  @Column({ type: 'uuid' })
+  accountId!: string;
 
   @Column('text')
-  email!: string;
+  fullName!: string;
 
-  @OneToOne(() => UserPasswordSchema, { cascade: ['insert', 'recover', 'update', 'remove', 'soft-remove'] })
-  @JoinColumn()
-  password!: Relation<UserPasswordSchema>;
+  @Column('date', { nullable: true })
+  dateOfBirth?: Date;
 
-  @ManyToMany(() => RoleSchema, { eager: true, cascade: ['recover'] })
-  @JoinTable({ name: 'users_roles' })
-  roles!: Relation<RoleSchema[]>;
+  @Column('enum', { enum: ['male', 'female', 'other'], nullable: true })
+  gender?: 'male' | 'female' | 'other';
+
+  @Column('text', { nullable: true })
+  avatar?: string;
+
+  @Column('text', { nullable: true })
+  phone?: string;
+
+  @OneToOne(() => AccountSchema, { eager: true })
+  @JoinColumn({ name: 'accountId' })
+  account!: Relation<AccountSchema>;
 
   @CreateDateColumn()
   createdAt!: Date;

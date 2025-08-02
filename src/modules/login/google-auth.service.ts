@@ -39,22 +39,34 @@ export class GoogleAuthService {
       }
     );
 
-    const user = await this.userRepository.findOneWithRelation({ email: profile.email }, { password: true });
+    const user = await this.userRepository.findByAccountEmail(profile.email);
+
+    if (!user || !user.account) {
+      res.redirect(
+        `/create-new-password=${
+          this.tokenService.sign({
+            email: profile.email,
+            name: profile.name
+          }).token
+        }`
+      );
+      return;
+    }
 
     const tokenNewPassword = this.tokenService.sign({
-      email: user.email,
+      email: user.account.email,
       name: profile.name
     });
 
-    if (!user?.password) {
+    if (!user.account.password) {
       res.redirect(`/create-new-password=${tokenNewPassword.token}`);
       return;
     }
 
     const tokenAuthorization = this.tokenService.sign({
-      email: user.email,
+      email: user.account.email,
       name: profile.name,
-      roles: user.roles.map((r) => r.name)
+      id: user.id
     });
 
     res.redirect(`/home?token=${tokenAuthorization.token}`);

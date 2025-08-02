@@ -5,7 +5,7 @@ import { UserListInput, UserListOutput } from '../use-cases/user-list';
 
 export abstract class IUserRepository extends IRepository<UserEntity> {
   abstract existsOnUpdate(
-    equalFilter: Pick<UserEntity, 'email'>,
+    equalFilter: Pick<UserEntity, 'accountId'>,
     notEqualFilter: Pick<UserEntity, 'id'>
   ): Promise<boolean>;
   abstract paginate(input: UserListInput): Promise<UserListOutput>;
@@ -14,4 +14,5 @@ export abstract class IUserRepository extends IRepository<UserEntity> {
     filter: Partial<UserEntity>,
     relations: { [key in keyof Partial<UserEntity>]: true | false }
   ): Promise<UserEntity>;
+  abstract findByAccountEmail(email: string): Promise<UserEntity>;
 }

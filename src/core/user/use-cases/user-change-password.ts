@@ -23,13 +23,13 @@ export class UserChangePasswordUsecase implements IUsecase {
 
   @ValidateSchema(UserChangePasswordSchema)
   async execute(input: UserChangePasswordInput): Promise<UserChangePasswordOutput> {
-    const user = await this.repository.findOneWithRelation({ id: input.id }, { password: true });
+    const user = await this.repository.findOneWithRelation({ id: input.id }, { account: true });
 
-    if (!user) {
+    if (!user || !user.account) {
       throw new ApiNotFoundException('userNotFound');
     }
 
-    const entityPassword = new UserPasswordEntity(user.password);
+    const entityPassword = new UserPasswordEntity(user.account.password);
 
     const password = CryptoUtils.createHash(input.password);
 
@@ -43,7 +43,7 @@ export class UserChangePasswordUsecase implements IUsecase {
 
     entityPassword.createPassword();
 
-    user.password = entityPassword;
+    user.account.password = entityPassword;
 
     await this.repository.create(user);
   }

@@ -16,9 +16,9 @@ export class UserDeleteUsecase implements IUsecase {
 
   @ValidateSchema(UserDeleteSchema)
   async execute({ id }: UserDeleteInput, { tracing, user: userData }: ApiTrancingInput): Promise<UserDeleteOutput> {
-    const user = await this.userRepository.findOneWithRelation({ id }, { password: true });
+    const user = await this.userRepository.findOneWithRelation({ id }, { account: true });
 
-    if (!user) {
+    if (!user || !user.account) {
       throw new ApiNotFoundException('userNotFound');
     }
 
@@ -26,7 +26,7 @@ export class UserDeleteUsecase implements IUsecase {
 
     await this.userRepository.softRemove(entity);
 
-    tracing.logEvent('user-deleted', `user: ${user.email} deleted by: ${userData.email}`);
+    tracing.logEvent('user-deleted', `user: ${user.account.email} deleted by: ${userData.email}`);
 
     return entity;
   }

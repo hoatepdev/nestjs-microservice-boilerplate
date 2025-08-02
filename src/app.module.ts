@@ -14,6 +14,7 @@ import {
   RequestTimeoutInterceptor,
   TracingInterceptor
 } from './middlewares/interceptors';
+import { AccountModule } from './modules/account/module';
 import { AlertModule } from './modules/alert/module';
 import { CatModule } from './modules/cat/module';
 import { HealthModule } from './modules/health/module';
@@ -30,6 +31,7 @@ import { UserModule } from './modules/user/module';
     LibModule,
     HealthModule,
     AlertModule,
+    AccountModule,
     UserModule,
     LoginModule,
     LogoutModule,

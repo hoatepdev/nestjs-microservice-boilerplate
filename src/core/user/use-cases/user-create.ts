@@ -1,3 +1,5 @@
+import { AccountEntity, AccountEntitySchema } from '@/core/account/entity/account';
+import { IAccountRepository } from '@/core/account/repository/account';
 import { RoleEnum } from '@/core/role/entity/role';
 import { IRoleRepository } from '@/core/role/repository/role';
 import { SendEmailInput } from '@/infra/email';
@@ -17,15 +19,21 @@ import { UserPasswordEntity, UserPasswordEntitySchema } from '../entity/user-pas
 import { IUserRepository } from '../repository/user';
 
 export const UserCreateSchema = UserEntitySchema.pick({
-  email: true,
-  name: true
+  fullName: true
 })
+  .merge(
+    AccountEntitySchema.pick({
+      email: true,
+      username: true
+    })
+  )
   .merge(UserPasswordEntitySchema.pick({ password: true }))
   .merge(InputValidator.object({ roles: InputValidator.array(InputValidator.nativeEnum(RoleEnum)).min(1) }));
 
 export class UserCreateUsecase implements IUsecase {
   constructor(
     private readonly userRepository: IUserRepository,
+    private readonly accountRepository: IAccountRepository,
     private readonly loggerService: ILoggerAdapter,
     private readonly event: IEventAdapter,
     private readonly roleRepository: IRoleRepository
@@ -39,34 +47,56 @@ export class UserCreateUsecase implements IUsecase {
       throw new ApiNotFoundException('roleNotFound');
     }
 
-    const entity = new UserEntity({ id: UUIDUtils.create(), name: input.name, email: input.email, roles });
+    const accountId = UUIDUtils.create();
+    const userId = UUIDUtils.create();
 
-    const passwordEntity = new UserPasswordEntity({ id: UUIDUtils.create(), password: input.password });
-
-    passwordEntity.createPassword();
-
-    entity.password = passwordEntity;
-
-    const userExists = await this.userRepository.findOne({
-      email: entity.email
+    const accountEntity = new AccountEntity({
+      id: accountId,
+      email: input.email,
+      username: input.username,
+      roles,
+      isActive: true
     });
 
-    if (userExists) {
+    const passwordEntity = new UserPasswordEntity({ id: UUIDUtils.create(), password: input.password });
+    passwordEntity.createPassword();
+    accountEntity.password = passwordEntity;
+
+    const userEntity = new UserEntity({
+      id: userId,
+      accountId,
+      fullName: input.fullName
+    });
+
+    const accountExists = await this.accountRepository.findOne({
+      email: accountEntity.email
+    });
+
+    if (accountExists) {
       throw new ApiConflictException('userExists');
     }
 
-    const user = await this.userRepository.create(entity);
+    const usernameExists = await this.accountRepository.findOne({
+      username: accountEntity.username
+    });
 
-    this.loggerService.info({ message: 'user created successfully', obj: { user } });
+    if (usernameExists) {
+      throw new ApiConflictException('usernameExists');
+    }
+
+    const account = await this.accountRepository.create(accountEntity);
+    const user = await this.userRepository.create(userEntity);
+
+    this.loggerService.info({ message: 'user created successfully', obj: { user, account } });
 
     this.event.emit<SendEmailInput>(EventNameEnum.SEND_EMAIL, {
       email: input.email,
       subject: 'Welcome',
       template: 'welcome',
-      payload: { name: input.name }
+      payload: { name: input.fullName }
     });
 
-    tracing.logEvent('user-created', `user: ${entity.email} created by: ${userData.email}`);
+    tracing.logEvent('user-created', `user: ${accountEntity.email} created by: ${userData.email}`);
 
     return user;
   }

@@ -1,7 +1,9 @@
 import { Test } from '@nestjs/testing';
 import { TestMock } from 'test/mock';
 
+import { AccountEntity } from '@/core/account/entity/account';
 import { RoleEntity, RoleEnum } from '@/core/role/entity/role';
+import { UserPasswordEntity } from '@/core/user/entity/user-password';
 import { ITokenAdapter, TokenLibModule } from '@/libs/token';
 import { ILoginAdapter } from '@/modules/login/adapter';
 import { ApiBadRequestException, ApiNotFoundException } from '@/utils/exception';
@@ -42,30 +44,45 @@ describe(LoginUsecase.name, () => {
       () => usecase.execute({} as LoginInput, TestMock.getMockTracing()),
       (issues: ZodExceptionIssue[]) => {
         expect(issues).toEqual([
-          { message: 'Required', path: TestMock.nameOf<LoginInput>('email') },
+          { message: 'Required', path: TestMock.nameOf<LoginInput>('accountId') },
           { message: 'Required', path: TestMock.nameOf<LoginInput>('password') }
         ]);
       }
     );
   });
 
-  const input: LoginInput = { email: 'admin@admin.com', password: '****' };
+  const input: LoginInput = { accountId: TestMock.getMockUUID(), password: '****' };
   test('when user not found, should expect an error', async () => {
     repository.findOneWithRelation = TestMock.mockResolvedValue<UserEntity>(null);
 
     await expect(usecase.execute(input, TestMock.getMockTracing())).rejects.toThrow(ApiNotFoundException);
   });
 
-  const user = new UserEntity({
+  const account = new AccountEntity({
     id: TestMock.getMockUUID(),
     email: 'admin@admin.com',
-    name: 'Admin',
+    username: 'Admin',
     roles: [new RoleEntity({ id: TestMock.getMockUUID(), name: RoleEnum.USER })],
-    password: { id: TestMock.getMockUUID(), password: '***' }
+    password: new UserPasswordEntity({ id: TestMock.getMockUUID(), password: '***' }),
+    isActive: true
+  });
+
+  const user = new UserEntity({
+    id: TestMock.getMockUUID(),
+    accountId: account.id,
+    fullName: 'Admin User',
+    account
   });
 
   test('when user role not found, should expect an error', async () => {
-    repository.findOneWithRelation = TestMock.mockResolvedValue<UserEntity>({ ...user, roles: [] });
+    const userWithoutRoles = new UserEntity({
+      ...user,
+      account: new AccountEntity({
+        ...account,
+        roles: []
+      })
+    });
+    repository.findOneWithRelation = TestMock.mockResolvedValue<UserEntity>(userWithoutRoles);
 
     await expect(usecase.execute(input, TestMock.getMockTracing())).rejects.toThrow(ApiNotFoundException);
   });
@@ -77,8 +94,17 @@ describe(LoginUsecase.name, () => {
   });
 
   test('when user login successfully, should expect a token', async () => {
-    user.password.password = '69bf0bc46f51b33377c4f3d92caf876714f6bbbe99e7544487327920873f9820';
-    repository.findOneWithRelation = TestMock.mockResolvedValue<UserEntity>(user);
+    const userWithCorrectPassword = new UserEntity({
+      ...user,
+      account: new AccountEntity({
+        ...account,
+        password: new UserPasswordEntity({
+          id: TestMock.getMockUUID(),
+          password: '69bf0bc46f51b33377c4f3d92caf876714f6bbbe99e7544487327920873f9820'
+        })
+      })
+    });
+    repository.findOneWithRelation = TestMock.mockResolvedValue<UserEntity>(userWithCorrectPassword);
 
     await expect(usecase.execute(input, TestMock.getMockTracing())).resolves.toEqual({
       accessToken: expect.any(String),
